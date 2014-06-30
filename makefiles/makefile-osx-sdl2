@@ -6,37 +6,40 @@ INCDIR=include
 
 #dependencies
 # SDL
-SDL_FLAGS=`sdl-config --cflags`
-SDL_LIBS=`sdl-config --libs`
+SDL_FLAGS=`sdl2-config --cflags`
+SDL_LIBS=`sdl2-config --libs`
 
 # ZLIB
 ZLIB_FLAGS=
 ZLIB_LIBS=-lz
 
-# PNG
-PNG_LIBS=-lpng
-
 #OPENGL
-OPENGL_LIB=-lGL
+OPENGL_LIB=-framework OpenGL
 
-CFLAGS=$(FLAGS) -I$(INCDIR) -I$(INCDIR)/gui -Wall $(SDL_FLAGS) $(ZLIB_FLAGS) $(PNG_FLAGS) -fno-strict-aliasing -ansi -DNO_OPENGL 
+# Mac support
+OSXCOMPAT = osx/macsupport.m -framework Cocoa
+
+CFLAGS=$(FLAGS) -I$(INCDIR) -I$(INCDIR)/gui -Wall $(SDL_FLAGS) $(ZLIB_FLAGS) -fno-strict-aliasing -fPIC -ansi -DNO_OPENGL -DTCOD_SDL2
 TEMP=/tmp
 CC=gcc
 CPP=g++
 .SUFFIXES: a .o .h .c
 
+LIB_INSTALL_PATH=/usr/local/lib
+INCLUDE_INSTALL_PATH=/usr/local/include
+
 $(TEMP)/libtcod/release/%.o : $(SRCDIR)/%.c
-	$(CC) $(CFLAGS) -O2 -DNDEBUG -s -o $@ -c $<
+	$(CC) $(CFLAGS) -DNDEBUG -O2 -s -o $@ -c $<
 $(TEMP)/libtcod/release/%.o : $(SRCDIR)/%.cpp
-	$(CPP) $(CFLAGS) -O2 -DNDEBUG -s -o $@ -c $< 
+	$(CPP) $(CFLAGS) -DNDEBUG -O2 -s -o $@ -c $<
 $(TEMP)/libtcod/release/gui/%.o : $(SRCDIR)/gui/%.cpp
-	$(CPP) $(CFLAGS) -O2 -DNDEBUG -s -o $@ -c $< 
+	$(CPP) $(CFLAGS) -DNDEBUG -O2 -s -o $@ -c $<
 $(TEMP)/libtcod/debug/%.o : $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -g -o $@ -c $<
 $(TEMP)/libtcod/debug/%.o : $(SRCDIR)/%.cpp
-	$(CPP) $(CFLAGS) -g -o $@ -c $< 
+	$(CPP) $(CFLAGS) -g -o $@ -c $<
 $(TEMP)/libtcod/debug/gui/%.o : $(SRCDIR)/gui/%.cpp
-	$(CPP) $(CFLAGS) -g -o $@ -c $< 
+	$(CPP) $(CFLAGS) -g -o $@ -c $<
 
 LIBOBJS_C_DEBUG= \
 	$(TEMP)/libtcod/debug/bresenham_c.o \
@@ -66,8 +69,9 @@ LIBOBJS_C_DEBUG= \
 	$(TEMP)/libtcod/debug/txtfield_c.o \
 	$(TEMP)/libtcod/debug/wrappers.o \
 	$(TEMP)/libtcod/debug/zip_c.o \
-	$(TEMP)/libtcod/debug/png/lodepng.o \
-	$(TEMP)/libtcod/debug/namegen_c.o
+	$(TEMP)/libtcod/debug/namegen_c.o \
+	$(TEMP)/libtcod/debug/sys_sdl2_c.o \
+	$(TEMP)/libtcod/debug/png/lodepng.o
 
 LIBOBJS_CPP_DEBUG= \
 	$(TEMP)/libtcod/debug/bresenham.o \
@@ -132,8 +136,9 @@ LIBOBJS_C_RELEASE= \
 	$(TEMP)/libtcod/release/tree_c.o \
 	$(TEMP)/libtcod/release/wrappers.o \
 	$(TEMP)/libtcod/release/zip_c.o \
-	$(TEMP)/libtcod/release/png/lodepng.o \
-	$(TEMP)/libtcod/release/namegen_c.o
+	$(TEMP)/libtcod/release/namegen_c.o \
+	$(TEMP)/libtcod/release/sys_sdl2_c.o \
+	$(TEMP)/libtcod/release/png/lodepng.o
 
 LIBOBJS_CPP_RELEASE= \
 	$(TEMP)/libtcod/release/bresenham.o \
@@ -172,9 +177,11 @@ GUIOBJS_RELEASE= \
 
 all : debug release
 
-debug : libtcod_debug.so libtcodxx_debug.so libtcodgui_debug.so
+debug : libtcod_debug.dylib libtcodxx_debug.dylib libtcodgui_debug.dylib
 
-release : libtcod.so libtcodxx.so libtcodgui.so
+release : libtcod.dylib libtcod.a \
+	libtcodxx.dylib libtcodxx.a \
+	libtcodgui.dylib libtcodgui.a
 
 $(TEMP)/libtcod/debug/png :
 	mkdir -p $@
@@ -188,30 +195,54 @@ $(TEMP)/libtcod/release/png :
 $(TEMP)/libtcod/release/gui :
 	mkdir -p $@
 
-libtcod.a : $(LIBOBJS_C_DEBUG)
-	ar r $@ $(LIBOBJS_C_DEBUG)
+#libtcod.a : $(LIBOBJS_C_DEBUG)
+#	ar r $@ $(LIBOBJS_C_DEBUG)
 
-libtcodxx.a : $(LIBOBJS_CPP_DEBUG)
-	ar r $@ $(LIBOBJS_CPP_DEBUG)
+#libtcodxx.a : $(LIBOBJS_CPP_DEBUG)
+#	ar r $@ $(LIBOBJS_CPP_DEBUG)
 
-libtcod.so : $(TEMP)/libtcod/release/png $(LIBOBJS_C_RELEASE)
-	gcc -shared -Wl,-soname,$@ -o $@ $(LIBOBJS_C_RELEASE) $(ZLIB_LIBS) $(PNG_LIBS) $(SDL_LIBS) $(CFLAGS) $(OPENGL_LIB)
+libtcod.a : $(TEMP)/libtcod/release/png $(LIBOBJS_C_RELEASE)
+	ar -r $@ $(LIBOBJS_C_RELEASE)
 
-libtcodxx.so : $(TEMP)/libtcod/release/png $(LIBOBJS_CPP_RELEASE)
-	gcc -shared -Wl,-soname,$@ -o $@ $(LIBOBJS_CPP_RELEASE) -L. -ltcod $(CFLAGS)
+libtcod_debug.a : $(TEMP)/libtcod/debug/png $(LIBOBJS_C_DEBUG)
+	ar -r $@ $(LIBOBJS_C_DEBUG)
 
-libtcodgui.so : $(TEMP)/libtcod/release/gui $(GUIOBJS_RELEASE)
-	gcc -shared -Wl,-soname,$@ -o $@ $(GUIOBJS_RELEASE) -L. -ltcod -ltcodxx $(CFLAGS)
+libtcodxx.a : $(TEMP)/libtcod/release/png $(LIBOBJS_CPP_RELEASE)
+	ar -r $@ $(LIBOBJS_CPP_RELEASE)
 
-libtcod_debug.so : $(TEMP)/libtcod/debug/png $(LIBOBJS_C_DEBUG)
-	gcc -shared -Wl,-soname,$@ -o $@ $(LIBOBJS_C_DEBUG) $(ZLIB_LIBS) $(PNG_LIBS) $(SDL_LIBS) $(CFLAGS) $(OPENGL_LIB)
+libtcodxx_debug.a : $(TEMP)/libtcod/debug/png $(LIBOBJS_CPP_DEBUG)
+	ar -r $@ $(LIBOBJS_CPP_DEBUG)
 
-libtcodxx_debug.so : $(TEMP)/libtcod/debug/png $(LIBOBJS_CPP_DEBUG)
-	gcc -shared -Wl,-soname,$@ -o $@ $(LIBOBJS_CPP_DEBUG) -L. -ltcod_debug $(CFLAGS)
+libtcodgui.a : $(TEMP)/libtcod/release/gui $(GUIOBJS_RELEASE)
+	ar -r $@ $(GUIOBJS_RELEASE)
 
-libtcodgui_debug.so : $(TEMP)/libtcod/debug/gui $(GUIOBJS_DEBUG)
-	gcc -shared -Wl,-soname,$@ -o $@ $(GUIOBJS_DEBUG) -L. -ltcod_debug -ltcodxx_debug $(CFLAGS)
+libtcodgui_debug.a : $(TEMP)/libtcod/debug/gui $(GUIOBJS_DEBUG)
+	ar -r $@ $(GUIOBJS_DEBUG)
 
-clean : 
-	\rm -f $(LIBOBJS_C_RELEASE) $(LIBOBJS_CPP_RELEASE) $(GUIOBJS_RELEASE) $(LIBOBJS_C_DEBUG) $(LIBOBJS_CPP_DEBUG) $(GUIOBJS_DEBUG) libtcod.a libtcodxx.a libtcod.so libtcodxx.so libtcodgui.so libtcod_debug.so libtcodxx_debug.so libtcodgui_debug.so libtcodpy.pyc
+libtcod.dylib : $(TEMP)/libtcod/release/png $(LIBOBJS_C_RELEASE)
+	g++ -shared -Wl,-install_name,$@ -o $@ $(LIBOBJS_C_RELEASE) $(OSXCOMPAT) $(ZLIB_LIBS) $(SDL_LIBS) $(CFLAGS) $(OPENGL_LIB)
+
+libtcodxx.dylib : $(TEMP)/libtcod/release/png $(LIBOBJS_CPP_RELEASE)
+	g++ -shared -Wl,-install_name,$@ -o $@ $(LIBOBJS_CPP_RELEASE) $(OSXCOMPAT) -L. -ltcod $(CFLAGS)
+
+libtcodgui.dylib : $(TEMP)/libtcod/release/gui $(GUIOBJS_RELEASE)
+	g++ -shared -Wl,-install_name,$@ -o $@ $(GUIOBJS_RELEASE) $(OSXCOMPAT) -L. -ltcod -ltcodxx $(CFLAGS)
+
+libtcod_debug.dylib : $(TEMP)/libtcod/debug/png $(LIBOBJS_C_DEBUG)
+	g++ -shared -Wl,-install_name,$@ -o $@ $(LIBOBJS_C_DEBUG) $(OSXCOMPAT) $(ZLIB_LIBS) $(SDL_LIBS) $(CFLAGS) $(OPENGL_LIB)
+
+libtcodxx_debug.dylib : $(TEMP)/libtcod/debug/png $(LIBOBJS_CPP_DEBUG)
+	g++ -shared -Wl,-install_name,$@ -o $@ $(LIBOBJS_CPP_DEBUG) $(OSXCOMPAT) -L. -ltcod_debug $(CFLAGS)
+
+libtcodgui_debug.dylib : $(TEMP)/libtcod/debug/gui $(GUIOBJS_DEBUG)
+	g++ -shared -Wl,-install_name,$@ -o $@ $(GUIOBJS_DEBUG) $(OSXCOMPAT) -L. -ltcod_debug -ltcodxx_debug $(CFLAGS)
+
+install : libtcod.a libtcod_debug.a libtcodxx.a libtcodxx_debug.a \
+	libtcodgui.a libtcodgui_debug.a
+	cp $^ $(LIB_INSTALL_PATH)
+	mkdir -p $(INCLUDE_INSTALL_PATH)/TCOD
+	cp -R include/* $(INCLUDE_INSTALL_PATH)/TCOD
+
+clean :
+	\rm -f $(LIBOBJS_C_RELEASE) $(LIBOBJS_CPP_RELEASE) $(GUIOBJS_RELEASE) $(LIBOBJS_C_DEBUG) $(LIBOBJS_CPP_DEBUG) $(GUIOBJS_DEBUG) libtcod.a libtcod_debug.a libtcodxx.a libtcodxx_debug.a libtcodgui.a libtcodgui_debug.a libtcod.dylib libtcodxx.dylib libtcodgui.dylib libtcod_debug.dylib libtcodxx_debug.dylib libtcodgui_debug.dylib libtcodpy.pyc
 

@@ -106,7 +106,7 @@
    wrappers like libtcod-net would be hosed, since there is no main statement there. */
 #ifdef TCOD_MACOSX 
 #define _SDL_main_h
-#include "SDL/SDL.h"
+#include <SDL.h>
 #endif
 
 /* base types */
