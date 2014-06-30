@@ -21,3 +21,8 @@
 *.i*86
 *.x86_64
 *.hex
+
+# for this project
+samples_c
+samples_cpp
+hmtool
