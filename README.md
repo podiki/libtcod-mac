@@ -12,8 +12,9 @@ Build Instructions
 
 Assuming you are using homebrew on Mac OS X (tested only on 10.9,
 10.10 I believe), there are a few dependencies. I *think* it is just
-`cmake, sdl` and then for SDL2 it is `sdl2, sdl2_image`, although that
-may be too many or too little. Please test.
+`cmake, sdl` and then for SDL2 it is `sdl2, sdl2_image` (although this
+may be too many or too little). The samples also require `upx`. Please
+test.
 
 Clone this repo with `git clone
 https://github.com/podiki/libtcod-mac.git` and then `cd libtcod-mac`.
