@@ -6,7 +6,7 @@ Mac OS X port of current development version of (libtcod)[https://bitbucket.org/
 Sorry, I need to get this better organized, but here are some basics.
 Also note that this repo is behind upstream libtcod at this
 point. I no longer have a Mac to maintain or update this port,
-so it would be great if someone can pick it up (see #4).
+so it would be great if someone can pick it up (see (Issue #4)[https://github.com/podiki/libtcod-mac/issues/4]).
 
 Build Instructions
 ==================
@@ -18,7 +18,7 @@ may be too many or too little). The samples also require `upx`. Please
 test.
 
 This has been tested with SDL2, but should work with SDL1 as well.
-You have to change an include path, see #9.
+You have to change an include path, see (Issue #9)[https://github.com/podiki/libtcod-mac/issues/9].
 
 Clone this repo with `git clone
 https://github.com/podiki/libtcod-mac.git` and then `cd libtcod-mac`.
